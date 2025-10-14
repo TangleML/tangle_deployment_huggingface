@@ -41,7 +41,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # Then, add the rest of the project source code and install it
 # Installing separately from its dependencies allows optimal layer caching
-COPY backend /app/backend
+# COPY backend /app/backend
+COPY --chown=user . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev
 
@@ -53,7 +54,7 @@ COPY start_HuggingFace.py /app/backend
 
 
 # Copy frontend build
-COPY frontend_build /app/frontend_build
+# COPY frontend_build /app/frontend_build
 
 # Put Tangle data into persistent storage
 RUN mkdir -p /data
