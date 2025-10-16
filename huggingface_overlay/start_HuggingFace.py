@@ -12,12 +12,12 @@ root_data_dir: str = "./data/"
 root_data_dir_path = pathlib.Path(root_data_dir).resolve()
 print(f"{root_data_dir_path=}")
 
-artifacts_dir_path = root_data_dir_path / "artifacts"
-logs_dir_path = root_data_dir_path / "logs"
+# artifacts_dir_path = root_data_dir_path / "artifacts"
+# logs_dir_path = root_data_dir_path / "logs"
 
 root_data_dir_path.mkdir(parents=True, exist_ok=True)
-artifacts_dir_path.mkdir(parents=True, exist_ok=True)
-logs_dir_path.mkdir(parents=True, exist_ok=True)
+# artifacts_dir_path.mkdir(parents=True, exist_ok=True)
+# logs_dir_path.mkdir(parents=True, exist_ok=True)
 # endregion
 
 # region: DB Configuration
@@ -27,12 +27,16 @@ print(f"{database_uri=}")
 # endregion
 
 # region: Storage configuration
-from cloud_pipelines.orchestration.storage_providers import local_storage
+# from cloud_pipelines.orchestration.storage_providers import local_storage
+# storage_provider = local_storage.LocalStorageProvider()
+from cloud_pipelines_backend.storage_providers import huggingface_repo_storage
 
-storage_provider = local_storage.LocalStorageProvider()
+storage_provider = huggingface_repo_storage.HuggingFaceRepoStorageProvider()
 
-artifacts_root_uri = artifacts_dir_path.as_posix()
-logs_root_uri = logs_dir_path.as_posix()
+# artifacts_root_uri = artifacts_dir_path.as_posix()
+# logs_root_uri = logs_dir_path.as_posix()
+artifacts_root_uri = os.environ.get("DATA_DIR_URI")
+logs_root_uri = artifacts_root_uri
 # endregion
 
 # region: Launcher configuration
@@ -46,6 +50,22 @@ logs_root_uri = logs_dir_path.as_posix()
 #     client=docker_client,
 # )
 launcher = None
+try:
+    from cloud_pipelines_backend.launchers import huggingface_launchers
+
+    launcher = huggingface_launchers.HuggingFaceJobsContainerLauncher()
+except Exception as ex:
+    print(ex)
+    pass
+
+try:
+    import huggingface_hub
+
+    huggingface_hub.list_repo_tree(repo_id="Ark-kun/tangle_data", repo_type="dataset")
+except Exception as ex:
+    print(ex)
+    pass
+
 # endregion
 
 # region: Orchestrator configuration
@@ -124,9 +144,9 @@ logger = logging.getLogger(__name__)
 # endregion
 
 # region: Database engine initialization
-from cloud_pipelines_backend import api_router
+from cloud_pipelines_backend import database_ops
 
-db_engine = api_router.create_db_engine(
+db_engine = database_ops.create_db_engine(
     database_uri=database_uri,
 )
 # endregion
@@ -144,12 +164,6 @@ from cloud_pipelines.orchestration.storage_providers import (
     interfaces as storage_interfaces,
 )
 from cloud_pipelines_backend import orchestrator_sql
-
-
-def create_db_and_tables(db_engine: sqlalchemy.Engine):
-    from cloud_pipelines_backend import backend_types_sql
-
-    backend_types_sql._TableBase.metadata.create_all(db_engine)
 
 
 def run_orchestrator(
@@ -211,11 +225,12 @@ import fastapi
 from fastapi import staticfiles
 
 from cloud_pipelines_backend import api_router
+from cloud_pipelines_backend import database_ops
 
 
 @contextlib.asynccontextmanager
 async def lifespan(app: fastapi.FastAPI):
-    create_db_and_tables(db_engine=db_engine)
+    database_ops.initialize_and_migrate_db(db_engine=db_engine)
     threading.Thread(
         target=run_configured_orchestrator,
         daemon=True,
@@ -267,7 +282,9 @@ found_frontend_build_files = False
 for web_app_dir in web_app_search_dirs:
     if web_app_dir.exists():
         found_frontend_build_files = True
-        logger.info(f"Found the Web app static files at {str(web_app_dir)}. Mounting them.")
+        logger.info(
+            f"Found the Web app static files at {str(web_app_dir)}. Mounting them."
+        )
         # The Web app base URL is currently static and hardcoded.
         # TODO: Remove this mount once the base URL becomes relative.
         app.mount(
