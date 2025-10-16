@@ -46,6 +46,10 @@ COPY --chown=user . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev
 
+
+# Installing HuggingFace. Needs to be done after uv sync
+RUN uv pip install huggingface_hub[cli]
+
 # Place executables in the environment at the front of the path
 ENV PATH="/app/backend/.venv/bin:$PATH"
 
