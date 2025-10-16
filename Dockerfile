@@ -1,5 +1,5 @@
 # Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
 # HuggingFace dev mode requires wget, git
 RUN apt-get update && \
@@ -53,8 +53,8 @@ RUN uv pip install huggingface_hub[cli]
 # Place executables in the environment at the front of the path
 ENV PATH="/app/backend/.venv/bin:$PATH"
 
-# COPY start_HuggingFace.py /app/
-COPY start_HuggingFace.py /app/backend
+# Adding HF-only experimental files
+COPY huggingface_overlay /app/backend
 
 
 # Copy frontend build
