@@ -1,10 +1,14 @@
 import logging
 import os
 import pathlib
+import typing
 
 import fastapi
+import huggingface_hub
+import huggingface_hub.errors
 
-# Debug
+ENABLE_HUGGINGFACE_AUTH = True
+
 
 # region Paths configuration
 
@@ -40,31 +44,10 @@ logs_root_uri = artifacts_root_uri
 # endregion
 
 # region: Launcher configuration
-# import docker
-# from cloud_pipelines_backend.launchers import local_docker_launchers
+from cloud_pipelines_backend.launchers import huggingface_launchers
 
-# docker_client = docker.DockerClient.from_env(timeout=5)
-# _ = docker_client.version()
-
-# launcher = local_docker_launchers.DockerContainerLauncher(
-#     client=docker_client,
-# )
-launcher = None
-try:
-    from cloud_pipelines_backend.launchers import huggingface_launchers
-
-    launcher = huggingface_launchers.HuggingFaceJobsContainerLauncher()
-except Exception as ex:
-    print(ex)
-    pass
-
-try:
-    import huggingface_hub
-
-    huggingface_hub.list_repo_tree(repo_id="Ark-kun/tangle_data", repo_type="dataset")
-except Exception as ex:
-    print(ex)
-    pass
+# Requires HF_TOKEN
+launcher = huggingface_launchers.HuggingFaceJobsContainerLauncher()
 
 # endregion
 
@@ -76,23 +59,193 @@ sleep_seconds_between_queue_sweeps: float = 5.0
 # region: Authentication configuration
 import fastapi
 
-ADMIN_USER_NAME = "admin"
-default_component_library_owner_username = ADMIN_USER_NAME
+print(f"{os.environ=}")
+
+print(f'{os.environ["PERSISTENT_STORAGE_ENABLED"]=}')
+
+hf_space_author_name = os.environ.get("SPACE_AUTHOR_NAME")
+hf_space_creator_user_id = os.environ.get("SPACE_CREATOR_USER_ID")
+print(f"{hf_space_author_name=}")
+print(f"{hf_space_creator_user_id=}")
+
+hf_token: str | None = None
+try:
+    hf_token = huggingface_hub.get_token()
+except Exception as ex:
+    logging.error("Error in `huggingface_hub.get_token()`")
+
+print(f"{(hf_token is not None)=}")
+
+hf_whoami: dict | None = None
+hf_whoami_user_name: str | None = None
+try:
+    hf_whoami = huggingface_hub.whoami()
+    hf_whoami_user_name = hf_whoami.get("name") if hf_whoami else None
+except Exception as ex:
+    logging.error("Error in `hugginface_hub.whoami()`")
+
+print(f"{hf_whoami=}")
+print(f"{hf_whoami_user_name=}")
 
 
 # ! This function is just a placeholder for user authentication and authorization so that every request has a user name and permissions.
 # ! This placeholder function authenticates the user as user with name "admin" and read/write/admin permissions.
 # ! In a real multi-user deployment, the `get_user_details` function MUST be replaced with real authentication/authorization based on OAuth or another auth system.
-def get_user_details(request: fastapi.Request):
-    return api_router.UserDetails(
-        name=ADMIN_USER_NAME,
-        permissions=api_router.Permissions(
-            read=True,
-            write=True,
-            admin=True,
-        ),
-    )
+# ADMIN_USER_NAME = "admin"
 
+# FIX: Set to False by default
+# any_user_can_read = os.environ.get("ANY_USER_CAN_READ", "false").lower() == "true"
+any_user_can_read = os.environ.get("ANY_USER_CAN_READ", "true").lower() == "true"
+print(f"{any_user_can_read=}")
+
+IS_HUGGINGFACE_SPACE = hf_space_author_name is not None
+print(f"{IS_HUGGINGFACE_SPACE=}")
+
+if IS_HUGGINGFACE_SPACE:
+    ADMIN_USER_NAME = hf_space_author_name
+    print(f"{ADMIN_USER_NAME=}")
+
+    default_component_library_owner_username = ADMIN_USER_NAME
+
+    # Single-tenant
+    # Selecting the tenant. It's the user or arg that host the space.
+    tenant_name = hf_space_author_name
+
+    # We need to be careful and prevent public spaces with HF_TOKEN set from letting anyone exploit the HF_TOKEN user.
+    def get_user_details(request: fastapi.Request):
+        user_can_read = False
+        user_can_write = False
+        user_can_admin = False
+        user_can_read = user_can_read or any_user_can_read
+
+        oauth_info = huggingface_hub.parse_huggingface_oauth(request)
+        # if "USER_PERMISSIONS_MAP" in os.environ:
+        #     ...
+
+        if oauth_info:
+            logger.info(f"{oauth_info=}")
+            logger.info(f"{oauth_info.user_info=}")
+            logger.info(f"{oauth_info.user_info.is_pro=}")
+            logger.info(f"{oauth_info.user_info.can_pay=}")
+            # TODO: Allow access for users belonging to an allowed org
+
+            user_is_space_author = (
+                oauth_info.user_info.preferred_username == hf_space_author_name
+            )
+            user_is_space_author_by_id = (
+                oauth_info.user_info.sub == hf_space_creator_user_id
+            )
+            # oauth_info.user_info.orgs[0].role_in_org
+            user_belongs_to_space_org = any(
+                org.preferred_username == hf_space_author_name
+                for org in oauth_info.user_info.orgs or []
+            )
+            logger.info(f"{user_belongs_to_space_org=}")
+            logger.info(f"{user_is_space_author=}")
+            logger.info(f"{user_is_space_author_by_id=}")
+
+            user_can_write = user_can_write or user_is_space_author
+            user_can_admin = user_can_admin or user_is_space_author
+
+            try:
+                # Checking user's role in the space org:
+                # For some reason, in OAuth_info, orgs are always empty.
+                # Getting the info using whoami
+                # This leads to extra HF API requests. Find a better way to fix.
+                logger.info(f"{huggingface_hub.whoami(token=oauth_info.access_token)=}")
+                oauth_whoami_user_info = huggingface_hub.whoami(
+                    token=oauth_info.access_token
+                )
+                user_orgs = oauth_whoami_user_info.get("orgs", [])
+                space_org_candidates = [
+                    user_org
+                    for user_org in user_orgs
+                    # Does not work: hf_space_creator_user_id is the creator user ID, not the space org ID
+                    # if user_org.get("id") == hf_space_creator_user_id
+                    if user_org.get("name") == hf_space_author_name
+                ]
+                if space_org_candidates:
+                    space_org = space_org_candidates[0]
+                    logger.info(f"{space_org=}")
+                    user_role_in_org = space_org.get("roleInOrg")
+                    logger.info(f"{user_role_in_org=}")
+
+                    if user_role_in_org == "admin":
+                        user_can_read = True
+                        user_can_write = True
+                        user_can_admin = True
+                    elif user_role_in_org in ("write", "contribute"):
+                        user_can_read = True
+                        user_can_write = True
+                    elif user_role_in_org == "read":
+                        user_can_read = True
+                    else:
+                        pass
+
+                user_details = api_router.UserDetails(
+                    name=oauth_info.user_info.preferred_username,
+                    permissions=api_router.Permissions(
+                        read=user_can_read,
+                        write=user_can_write,
+                        admin=user_can_admin,
+                    ),
+                )
+                logger.info(f"{user_details=}")
+                return user_details
+            except huggingface_hub.errors.HfHubHTTPError as ex:
+                # Maybe redirect to logout or login API?
+                # Does not work. The browser is not redirected
+                # logger.error(
+                #     f"Error getting authentication info from HuggingFace. Redirecting to login",
+                #     exc_info=True,
+                # )
+                # raise fastapi.HTTPException(
+                #     status_code=302,
+                #     detail="Authorization error",
+                #     # headers={"Location": "/api/oauth/huggingface/logout"},
+                #     headers={"Location": "/api/oauth/huggingface/login"},
+                # )
+                if ex.response and ex.response.status_code == 401:
+                    logger.error(
+                        f"Error getting authentication info from HuggingFace. Deleting session OAuth info",
+                        exc_info=True,
+                    )
+                    request.session.pop("oauth_info", None)
+                else:
+                    logger.error(
+                        f"Error getting authentication info from HuggingFace.",
+                        exc_info=True,
+                    )
+
+        return api_router.UserDetails(
+            name="anonymous",
+            permissions=api_router.Permissions(
+                read=any_user_can_read,
+                write=False,
+                admin=False,
+            ),
+        )
+
+else:
+    # We're not in space.
+    ADMIN_USER_NAME = hf_whoami_user_name or "admin"
+    print(f"{ADMIN_USER_NAME=}")
+
+    default_component_library_owner_username = ADMIN_USER_NAME
+
+    # We need to be careful and prevent public spaces with HF_TOKEN set from letting anyone exploit the HF_TOKEN user.
+    def get_user_details(request: fastapi.Request):
+        return api_router.UserDetails(
+            name=ADMIN_USER_NAME,
+            permissions=api_router.Permissions(
+                read=True,
+                write=True,
+                admin=True,
+            ),
+        )
+
+
+# !!! TODO: Use authenticated user's token to run Jobs via launcher.
 
 # endregion
 
@@ -268,6 +421,26 @@ api_router.setup_routes(
 @app.get("/services/ping")
 def health_check():
     return {}
+
+
+# @app.get("/api/users/me")
+# def get_current_user(
+#     user_details: typing.Annotated[
+#         api_router.UserDetails | None, fastapi.Depends(get_user_details)
+#     ],
+# ) -> api_router.UserDetails | None:
+#     return user_details
+
+
+# Setting up HuggingFace auth.
+# if "HF_TOKEN" in os.environ:
+
+if ENABLE_HUGGINGFACE_AUTH:
+    if "OAUTH_CLIENT_SECRET" not in os.environ:
+        logger.warning(
+            "HuggingFace auth is enabled, but OAUTH_CLIENT_SECRET env variable is is missing."
+        )
+    huggingface_hub.attach_huggingface_oauth(app, route_prefix="/api/")
 
 
 # Mounting the web app if the files exist

@@ -7,6 +7,9 @@ sdk: docker
 pinned: false
 hf_oauth: true
 hf_oauth_scopes:
+ - contribute-repos
+ - jobs
+ # Remove this
  - read-repos
  - write-repos
  - manage-repos
