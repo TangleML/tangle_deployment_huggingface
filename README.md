@@ -14,4 +14,4 @@ hf_oauth_scopes:
 suggested_storage: small
 ---
 
-[Tangle Pipelines](https://cloud-pipelines.net)
+[Tangle Pipelines](https://tangleml.com)
