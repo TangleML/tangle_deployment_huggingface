@@ -10,6 +10,8 @@ hf_oauth_scopes:
  - read-repos
  - write-repos
  - manage-repos
+# Suggest persistent storage for the DB
+suggested_storage: small
 ---
 
 [Tangle Pipelines](https://cloud-pipelines.net)
