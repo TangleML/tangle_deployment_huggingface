@@ -137,12 +137,16 @@ if IS_HUGGINGFACE_SPACE:
                 repo_type=repo_type,
             )
             repo_exists = True
+            print(f"Artifact repo exists: {artifacts_repo_id}")
 
+        except huggingface_hub.errors.RepositoryNotFoundError:
+            pass
         except Exception as ex:
             raise RuntimeError(
                 f"Error checking for the artifacts repo existence. {artifacts_repo_id=}"
             ) from ex
         if not repo_exists:
+            print(f"Artifact repo does not exist. Creating it: {artifacts_repo_id}")
             try:
                 _ = huggingface_hub.create_repo(
                     repo_id=artifacts_repo_id,
@@ -150,12 +154,12 @@ if IS_HUGGINGFACE_SPACE:
                     private=True,
                     exist_ok=True,
                 )
-                artifacts_root_uri = proposed_artifacts_root_uri
-                logs_root_uri = artifacts_root_uri
             except Exception as ex:
                 raise RuntimeError(
                     f"Error creating the artifacts repo. {artifacts_repo_id=}"
                 ) from ex
+        artifacts_root_uri = proposed_artifacts_root_uri
+        logs_root_uri = artifacts_root_uri
 
     print(f"{artifacts_root_uri=}")
 
