@@ -63,8 +63,11 @@ print(f"{os.environ=}")
 
 print(f'{os.environ["PERSISTENT_STORAGE_ENABLED"]=}')
 
+# user or org name
 hf_space_author_name = os.environ.get("SPACE_AUTHOR_NAME")
+# Creator *user* ID (never org ID)
 hf_space_creator_user_id = os.environ.get("SPACE_CREATOR_USER_ID")
+# SPACE_ID="TangleML/tangle" == f"{SPACE_AUTHOR_NAME}/{SPACE_REPO_NAME}"
 print(f"{hf_space_author_name=}")
 print(f"{hf_space_creator_user_id=}")
 
@@ -110,6 +113,51 @@ if IS_HUGGINGFACE_SPACE:
     # Single-tenant
     # Selecting the tenant. It's the user or arg that host the space.
     tenant_name = hf_space_author_name
+
+    #  Create artifact repo if it does not exist.
+    if not artifacts_root_uri:
+        repo_user: str = tenant_name
+        if not repo_user:
+            raise ValueError("artifacts_root_uri, tenant_name are None")
+
+        repo_type = "dataset"
+        # dataset_repo_id = f"{repo_user}/{repo_name}"
+        # SPACE_ID == "TangleML/tangle" == f"{SPACE_AUTHOR_NAME}/{SPACE_REPO_NAME}"
+        space_repo_id = os.environ["SPACE_ID"]
+        artifacts_repo_id = space_repo_id + "_data"
+        # proposed_artifacts_root_uri = f"hf://{repo_type}s/{repo_user}/{repo_name}/data"
+        proposed_artifacts_root_uri = f"hf://{repo_type}s/{artifacts_repo_id}/data"
+        print(
+            f"Artifact repo is not specified. Checking or creating it. {artifacts_repo_id=}"
+        )
+        repo_exists = False
+        try:
+            _ = huggingface_hub.repo_info(
+                repo_id=artifacts_repo_id,
+                repo_type=repo_type,
+            )
+            repo_exists = True
+
+        except Exception as ex:
+            raise RuntimeError(
+                f"Error checking for the artifacts repo existence. {artifacts_repo_id=}"
+            ) from ex
+        if not repo_exists:
+            try:
+                _ = huggingface_hub.create_repo(
+                    repo_id=artifacts_repo_id,
+                    repo_type=repo_type,
+                    private=True,
+                    exist_ok=True,
+                )
+                artifacts_root_uri = proposed_artifacts_root_uri
+                logs_root_uri = artifacts_root_uri
+            except Exception as ex:
+                raise RuntimeError(
+                    f"Error creating the artifacts repo. {artifacts_repo_id=}"
+                ) from ex
+
+    print(f"{artifacts_root_uri=}")
 
     # We need to be careful and prevent public spaces with HF_TOKEN set from letting anyone exploit the HF_TOKEN user.
     def get_user_details(request: fastapi.Request):
@@ -234,6 +282,9 @@ if IS_HUGGINGFACE_SPACE:
 
 else:
     # We're not in space.
+    if not artifacts_root_uri:
+        raise ValueError("Must provide artifacts repo root URI")
+
     ADMIN_USER_NAME = hf_whoami_user_name or "admin"
     print(f"{ADMIN_USER_NAME=}")
 
