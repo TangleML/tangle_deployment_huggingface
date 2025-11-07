@@ -265,16 +265,16 @@ if IS_HUGGINGFACE_SPACE:
                         exc_info=True,
                     )
         # Return unauthenticated
-        # return api_router.UserDetails(
-        #     # name="anonymous",
-        #     name=None,
-        #     permissions=api_router.Permissions(
-        #         read=any_user_can_read,
-        #         write=False,
-        #         admin=False,
-        #     ),
-        # )
-        return None
+        return api_router.UserDetails(
+            # name="anonymous",
+            name=None,
+            permissions=api_router.Permissions(
+                read=any_user_can_read,
+                write=False,
+                admin=False,
+            ),
+        )
+        # return None
         # We cannot raise error here. /api/pipeline_runs/ route depends on get_user_name
         # raise fastapi.HTTPException(
         #     status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
