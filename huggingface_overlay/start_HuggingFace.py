@@ -43,19 +43,6 @@ artifacts_root_uri = os.environ.get("DATA_DIR_URI")
 logs_root_uri = artifacts_root_uri
 # endregion
 
-# region: Launcher configuration
-from cloud_pipelines_backend.launchers import huggingface_launchers
-
-# Requires HF_TOKEN
-launcher = huggingface_launchers.HuggingFaceJobsContainerLauncher()
-
-# endregion
-
-# region: Orchestrator configuration
-default_task_annotations = {}
-sleep_seconds_between_queue_sweeps: float = 5.0
-# endregion
-
 # region: Authentication configuration
 import fastapi
 
@@ -364,6 +351,22 @@ from cloud_pipelines_backend import database_ops
 db_engine = database_ops.create_db_engine(
     database_uri=database_uri,
 )
+# endregion
+
+
+# region: Launcher configuration
+from cloud_pipelines_backend.launchers import huggingface_launchers
+
+# Requires HF_TOKEN
+launcher = huggingface_launchers.HuggingFaceJobsContainerLauncher(
+    namespace=hf_space_author_name
+)
+# endregion
+
+
+# region: Orchestrator configuration
+default_task_annotations = {}
+sleep_seconds_between_queue_sweeps: float = 5.0
 # endregion
 
 
