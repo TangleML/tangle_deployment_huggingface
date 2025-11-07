@@ -216,14 +216,20 @@ if IS_HUGGINGFACE_SPACE:
                         f"Error getting authentication info from HuggingFace.",
                         exc_info=True,
                     )
-
-        return api_router.UserDetails(
-            name="anonymous",
-            permissions=api_router.Permissions(
-                read=any_user_can_read,
-                write=False,
-                admin=False,
-            ),
+        # Return unauthenticated
+        # return api_router.UserDetails(
+        #     # name="anonymous",
+        #     name=None,
+        #     permissions=api_router.Permissions(
+        #         read=any_user_can_read,
+        #         write=False,
+        #         admin=False,
+        #     ),
+        # )
+        # return None
+        raise fastapi.HTTPException(
+            status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthenticated",
         )
 
 else:
