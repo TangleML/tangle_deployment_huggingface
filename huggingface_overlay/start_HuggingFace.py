@@ -274,11 +274,12 @@ if IS_HUGGINGFACE_SPACE:
         #         admin=False,
         #     ),
         # )
-        # return None
-        raise fastapi.HTTPException(
-            status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
-            detail="Unauthenticated",
-        )
+        return None
+        # We cannot raise error here. /api/pipeline_runs/ route depends on get_user_name
+        # raise fastapi.HTTPException(
+        #     status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
+        #     detail="Unauthenticated",
+        # )
 
 else:
     # We're not in space.
