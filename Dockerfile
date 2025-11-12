@@ -1,3 +1,14 @@
+# Build tangle-ui from GitHub
+FROM node:22 as ui_builder
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+WORKDIR /app
+
+RUN git clone https://github.com/TangleML/tangle-ui.git . && git checkout stable_huggingface
+
+RUN npm install
+RUN echo VITE_GIT_COMMIT="$(git rev-parse --short HEAD | tr -d "\n")" >.env
+RUN npm run build:hf
+
 # Use a Python image with uv pre-installed
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
@@ -42,7 +53,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Then, add the rest of the project source code and install it
 # Installing separately from its dependencies allows optimal layer caching
 # COPY backend /app/backend
-COPY --chown=user . /app
+# COPY --chown=user . /app
+COPY --chown=user backend /app/backend
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev
 
@@ -59,6 +71,8 @@ COPY huggingface_overlay /app/backend
 
 # Copy frontend build
 # COPY frontend_build /app/frontend_build
+
+COPY --from=ui_builder /app/dist /app/frontend_build
 
 # Put Tangle data into persistent storage
 RUN mkdir -p /data
