@@ -12,7 +12,7 @@ hf_oauth_scopes:
  # Remove this
  - read-repos
  - write-repos
- - manage-repos
+ # - manage-repos
 # Suggest persistent storage for the DB
 suggested_storage: small
 ---
