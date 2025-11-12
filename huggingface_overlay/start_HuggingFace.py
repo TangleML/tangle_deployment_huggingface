@@ -48,7 +48,7 @@ import fastapi
 
 print(f"{os.environ=}")
 
-print(f'{os.environ["PERSISTENT_STORAGE_ENABLED"]=}')
+print(f'{os.environ.get("PERSISTENT_STORAGE_ENABLED")=}')
 
 # user or org name
 hf_space_author_name = os.environ.get("SPACE_AUTHOR_NAME")
@@ -228,6 +228,7 @@ if IS_HUGGINGFACE_SPACE:
                         write=user_can_write,
                         admin=user_can_admin,
                     ),
+                    # oauth_user_info = request.session["oauth_info"].get("userinfo", {}),
                 )
                 logger.info(f"{user_details=}")
                 return user_details
@@ -310,7 +311,8 @@ LOGGING_CONFIG = {
     },
     "handlers": {
         "default": {
-            "level": "INFO",
+            # "level": "INFO",
+            "level": "DEBUG",
             "formatter": "standard",
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stderr",
@@ -320,6 +322,26 @@ LOGGING_CONFIG = {
         # root logger
         "": {
             "level": "INFO",
+            "handlers": ["default"],
+            "propagate": False,
+        },
+        __name__: {
+            "level": "DEBUG",
+            "handlers": ["default"],
+            "propagate": False,
+        },
+        "cloud_pipelines_backend.orchestrator_sql": {
+            "level": "DEBUG",
+            "handlers": ["default"],
+            "propagate": False,
+        },
+        "cloud_pipelines_backend.launchers.huggingface_launchers": {
+            "level": "DEBUG",
+            "handlers": ["default"],
+            "propagate": False,
+        },
+        "cloud_pipelines.orchestration.launchers.local_docker_launchers": {
+            "level": "DEBUG",
             "handlers": ["default"],
             "propagate": False,
         },
@@ -538,3 +560,8 @@ for web_app_dir in web_app_search_dirs:
 if not found_frontend_build_files:
     logger.warning("The Web app files were not found. Skipping.")
 # endregion
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="127.0.0.1", port=8000)
