@@ -632,6 +632,7 @@ def update_tenant_info_in_db(request: fastapi.Request) -> TenantRow:
                 name=oauth_user_info["preferred_username"],
                 access_token=oauth_info["access_token"],
             )
+            session.add(tenant_row)
         tenant_row.oauth_info = oauth_info
         extra_data = tenant_row.extra_data or {}
         extra_data["huggingface_user_info"] = huggingface_user_info
