@@ -699,6 +699,7 @@ api_router._setup_routes_internal(
     # container_launcher_for_log_streaming=launcher,
     # TODO: Handle the default library
     # default_component_library_owner_username=default_component_library_owner_username,
+    get_launcher=get_launcher_for_active_user,
     pipeline_run_creation_hook=handle_pipeline_run_creation,
 )
 
