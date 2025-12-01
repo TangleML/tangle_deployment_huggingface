@@ -182,7 +182,7 @@ tenants_database_path_obj.parent.mkdir(parents=True, exist_ok=True)
 
 # region: Orchestrator configuration
 default_task_annotations: dict[str, str] = {}
-sleep_seconds_between_queue_sweeps: float = 5.0
+sleep_seconds_between_queue_sweeps: float = 1.0
 # endregion
 
 # region: Authentication configuration

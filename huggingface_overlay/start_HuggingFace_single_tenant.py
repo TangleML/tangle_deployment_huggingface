@@ -388,7 +388,7 @@ launcher = huggingface_launchers.HuggingFaceJobsContainerLauncher(
 
 # region: Orchestrator configuration
 default_task_annotations = {}
-sleep_seconds_between_queue_sweeps: float = 5.0
+sleep_seconds_between_queue_sweeps: float = 1.0
 # endregion
 
 
