@@ -7,6 +7,7 @@ RUN git clone https://github.com/TangleML/tangle-ui.git . && git checkout stable
 
 RUN npm install
 RUN echo VITE_GIT_COMMIT="$(git rev-parse --short HEAD | tr -d "\n")" >.env
+RUN echo VITE_COMPONENT_LIBRARY_URL_DEFAULT_VALUE="https://raw.githubusercontent.com/Cloud-Pipelines/pipeline_components/refs/heads/stable_huggingface/pipeline_component_library.with_texts.yaml" >>.env
 RUN npm run build:hf
 
 # Use a Python image with uv pre-installed
