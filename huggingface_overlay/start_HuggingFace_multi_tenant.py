@@ -656,7 +656,7 @@ def start_all_active_tenant_orchestrators():
                     tenant_namespace=tenant_row.name,
                     tenant_token=tenant_row.access_token,
                 )
-            except Exception as ex,
+            except Exception as ex:
                 logger.exception(
                     f"start_all_active_tenant_orchestrators: Error starting orchestrator for {tenant_row.id=}. Marking the orchestrator as inactive."
                 )
