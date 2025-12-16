@@ -649,12 +649,19 @@ def start_all_active_tenant_orchestrators():
         for tenant_row in session.scalars(
             sqlalchemy.select(TenantRow).where(TenantRow.orchestrator_active)
         ):
-            # TODO: Respect the orchestrator_config
-            _ = get_or_start_orchestrator(
-                tenant_id=tenant_row.id,
-                tenant_namespace=tenant_row.name,
-                tenant_token=tenant_row.access_token,
-            )
+            try:
+                # TODO: Respect the orchestrator_config
+                _ = get_or_start_orchestrator(
+                    tenant_id=tenant_row.id,
+                    tenant_namespace=tenant_row.name,
+                    tenant_token=tenant_row.access_token,
+                )
+            except Exception as ex,
+                logger.exception(
+                    f"start_all_active_tenant_orchestrators: Error starting orchestrator for {tenant_row.id=}. Marking the orchestrator as inactive."
+                )
+                tenant_row.orchestrator_active = False
+        session.commit()
 
 
 # region: API Server initialization
