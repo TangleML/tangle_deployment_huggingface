@@ -647,8 +647,14 @@ def start_all_active_tenant_orchestrators():
     logger.debug(f"start_all_active_tenant_orchestrators")
     with orm.Session(bind=tenants_db_engine) as session:
         for tenant_row in session.scalars(
-            sqlalchemy.select(TenantRow).where(TenantRow.orchestrator_active)
+            # sqlalchemy.select(TenantRow).where(TenantRow.orchestrator_active)
+            sqlalchemy.select(TenantRow)
         ):
+            logger.debug(
+                f"start_all_active_tenant_orchestrators: Tenant found: id={tenant_row.id}, name={tenant_row.name}, active={tenant_row.orchestrator_active}"
+            )
+            if not tenant_row.orchestrator_active:
+                continue
             try:
                 # TODO: Respect the orchestrator_config
                 _ = get_or_start_orchestrator(
