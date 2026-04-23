@@ -213,7 +213,7 @@ class HuggingFaceJobsContainerLauncher(
         # -L, --dereference            always follow symbolic links in SOURCE
         input_download_lines = [
             f'mkdir -p "$(dirname "{container_path}")"'
-            f' && snapshot_dir=`hf download --repo-type "{hf_uri.repo_type}" "{hf_uri.repo_id}" --include "{hf_uri.path}*" --format quiet`'
+            f' && snapshot_dir=`hf download --repo-type "{hf_uri.repo_type}" "{hf_uri.repo_id}" --include "{hf_uri.path}*" --quiet`'
             f' && cp -r -L "$snapshot_dir/{hf_uri.path}" "{container_path}"'
             for hf_uri, container_path in (
                 (huggingface_repo_storage.HuggingFaceRepoUri.parse(uri), container_path)
@@ -244,7 +244,7 @@ fi
 
 export PATH="$HOME/.local/bin:$PATH"
 
-uv tool install 'huggingface_hub==1.11.0' --python '>=3.9'
+uv tool install 'huggingface_hub==1.8.0' --python '>=3.9'
 hf version
 
 # Downloading the input data
@@ -262,7 +262,7 @@ set -e +x
 
 exit_code=`cat "$exit_code_path"`
 
-hf upload --repo-type '{hf_repo_uri.repo_type}' '{hf_repo_uri.repo_id}' '{container_outputs_root}' '{path_in_repo}' --format quiet
+hf upload --repo-type '{hf_repo_uri.repo_type}' '{hf_repo_uri.repo_id}' '{container_outputs_root}' '{path_in_repo}' --quiet
 exit "$exit_code"
 """
 
