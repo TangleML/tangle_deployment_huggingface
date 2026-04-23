@@ -361,7 +361,10 @@ class LaunchedHuggingFaceJobContainer(interfaces.LaunchedContainer):
         # HF uses the "SCHEDULING" status, but it's missing from the client library: https://github.com/huggingface/huggingface_hub/blame/50013bdfb6879fb49c94cc7ade5b8c10f59000c0/src/huggingface_hub/_jobs_api.py#L32
         elif status_str == "SCHEDULING":
             return interfaces.ContainerStatus.PENDING
-        else:  # "DELETED"
+        elif status_str == huggingface_hub.JobStage.DELETED:
+            return interfaces.ContainerStatus.ERROR
+        else:
+            _logger.error(f"Unexpected HF Job status: {self._job.status}")
             return interfaces.ContainerStatus.ERROR
 
     @property
