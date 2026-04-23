@@ -360,7 +360,12 @@ class LaunchedHuggingFaceJobContainer(interfaces.LaunchedContainer):
             return interfaces.ContainerStatus.FAILED
         # HF uses the "SCHEDULING" status, but it's missing from the client library: https://github.com/huggingface/huggingface_hub/blame/50013bdfb6879fb49c94cc7ade5b8c10f59000c0/src/huggingface_hub/_jobs_api.py#L32
         elif status_str == "SCHEDULING":
-            return interfaces.ContainerStatus.PENDING
+            # Workaround for HuggingFace x Orchestrator issue:
+            # HuggingFace creates a Job in RUNNING state, but then switches it to SCHEDULING==PENDING, which the older version of the orchestrator does not permit.
+            # [INFO] cloud_pipelines_backend.orchestrator_sql: Container execution 019db8bca480118220d2 is now in state ContainerStatus.PENDING (was ContainerStatus.RUNNING).
+            # [ERROR] cloud_pipelines_backend.orchestrator_sql: Container execution 019db8bca480118220d2 is now in unexpected state ContainerStatus.PENDING. System error. 
+            # return interfaces.ContainerStatus.PENDING
+            return interfaces.ContainerStatus.RUNNING
         elif status_str == huggingface_hub.JobStage.DELETED:
             return interfaces.ContainerStatus.ERROR
         else:
