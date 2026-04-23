@@ -363,6 +363,10 @@ LOGGING_CONFIG = {
             "level": "WARNING",
             "handlers": ["default"],
         },
+        "huggingface_hub._oauth": {
+            "level": "DEBUG",
+            "handlers": ["default"],
+        },
     },
 }
 
