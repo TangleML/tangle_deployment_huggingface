@@ -161,6 +161,10 @@ if IS_HUGGINGFACE_SPACE:
         # if "USER_PERMISSIONS_MAP" in os.environ:
         #     ...
 
+        if not oauth_info:
+            logger.debug(
+                f"get_user_details: huggingface_hub.parse_huggingface_oauth returned {oauth_info}"
+            )
         if oauth_info:
             logger.info(f"{oauth_info=}")
             logger.info(f"{oauth_info.user_info=}")
