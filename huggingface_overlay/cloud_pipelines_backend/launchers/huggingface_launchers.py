@@ -244,7 +244,7 @@ fi
 
 export PATH="$HOME/.local/bin:$PATH"
 
-uv tool install 'huggingface_hub==1.8.0' --python '>=3.9'
+uv tool install 'huggingface_hub==1.21.0' --python '>=3.9'
 hf version
 
 # Downloading the input data
