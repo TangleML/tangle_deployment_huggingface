@@ -1,14 +1,16 @@
 # Build tangle-ui from GitHub
-FROM node:22 as ui_builder
+FROM node:24 AS ui_builder
+COPY --from=ghcr.io/pnpm/pnpm:12 /usr/local/bin/pnpm /usr/local/bin/pnpm
+
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 WORKDIR /app
 
-RUN git clone https://github.com/TangleML/tangle-ui.git . && git checkout stable_huggingface
+RUN git clone https://github.com/TangleML/tangle-ui.git . && git checkout stable_huggingface_2026-11
 
-RUN npm install
+RUN pnpm install
 RUN echo VITE_GIT_COMMIT="$(git rev-parse --short HEAD | tr -d "\n")" >.env
 RUN echo VITE_COMPONENT_LIBRARY_URL_DEFAULT_VALUE="https://raw.githubusercontent.com/Cloud-Pipelines/pipeline_components/refs/heads/stable_huggingface/pipeline_component_library.with_texts.yaml" >>.env
-RUN npm run build:hf
+RUN pnpm run build:hf
 
 # Use a Python image with uv pre-installed
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
@@ -61,7 +63,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 
 # Installing HuggingFace. Needs to be done after uv sync
-RUN uv pip install huggingface_hub[oauth]
+# RUN uv pip install huggingface_hub[oauth]
+RUN uv pip install huggingface_hub[oauth]==2.4.0
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/backend/.venv/bin:$PATH"

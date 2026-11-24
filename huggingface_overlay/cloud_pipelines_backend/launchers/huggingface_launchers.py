@@ -244,7 +244,7 @@ fi
 
 export PATH="$HOME/.local/bin:$PATH"
 
-uv tool install 'huggingface_hub==1.21.0' --python '>=3.9'
+uv tool install 'huggingface_hub==2.4.0' --python '>=3.11'
 hf version
 
 # Downloading the input data
@@ -363,7 +363,7 @@ class LaunchedHuggingFaceJobContainer(interfaces.LaunchedContainer):
             # Workaround for HuggingFace x Orchestrator issue:
             # HuggingFace creates a Job in RUNNING state, but then switches it to SCHEDULING==PENDING, which the older version of the orchestrator does not permit.
             # [INFO] cloud_pipelines_backend.orchestrator_sql: Container execution 019db8bca480118220d2 is now in state ContainerStatus.PENDING (was ContainerStatus.RUNNING).
-            # [ERROR] cloud_pipelines_backend.orchestrator_sql: Container execution 019db8bca480118220d2 is now in unexpected state ContainerStatus.PENDING. System error. 
+            # [ERROR] cloud_pipelines_backend.orchestrator_sql: Container execution 019db8bca480118220d2 is now in unexpected state ContainerStatus.PENDING. System error.
             # return interfaces.ContainerStatus.PENDING
             return interfaces.ContainerStatus.RUNNING
         elif status_str == huggingface_hub.JobStage.DELETED:
