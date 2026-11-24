@@ -460,7 +460,10 @@ class LaunchedHuggingFaceJobContainer(interfaces.LaunchedContainer):
     def to_dict(self) -> dict[str, Any]:
         debug_job_info = dataclasses.asdict(self._job)
         # Fix JSON serialization of datetime
-        del debug_job_info["created_at"]
+        # TODO: Handle the serialization properly
+        debug_job_info.pop("created_at", None)
+        debug_job_info.pop("started_at", None)
+        debug_job_info.pop("finished_at", None)
         return dict(
             huggingface_job=dict(
                 id=self.id,
